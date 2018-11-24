@@ -1397,7 +1397,6 @@ public abstract class Tree {
 
         public Expr expr;
         public Tree stmt;
-
         public IfSubStmt(Expr expr, Tree stmt, Location loc) {
             super(IFSUBSTMT, loc);
             this.expr = expr;

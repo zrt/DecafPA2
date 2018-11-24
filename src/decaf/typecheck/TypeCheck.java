@@ -34,6 +34,7 @@ import decaf.error.UndeclVarError;
 import decaf.error.BadScopyArgError;
 import decaf.error.BadScopySrcError;
 import decaf.error.BadSealedInherError;
+import decaf.error.BadTestExpr;
 import decaf.frontend.Parser;
 import decaf.scope.ClassScope;
 import decaf.scope.FormalScope;
@@ -429,15 +430,9 @@ public class TypeCheck extends Tree.Visitor {
 		}
 
 		for (Tree.ClassDef cd : program.classes) {
-
-//			System.out.println(cd.name+','+cd.parent+'\n');
 			if(cd.sealed){
 				for (Tree.ClassDef cd2 : program.classes) {
-
-//					System.out.println('2' + cd2.name+','+cd2.parent+'\n');
-
 					if(cd.name.equals(cd2.parent)){
-//						System.out.println(cd.name+'\n');
 						issueError(new BadSealedInherError(cd2.loc));
 					}
 				}
@@ -573,6 +568,28 @@ public class TypeCheck extends Tree.Visitor {
 				}
 			}
 		}
+	}
+
+	// visitGuardedStmt
+	@Override
+	public void visitGuardedStmt(Tree.GuardedStmt gstmt){
+		if(gstmt.branchs != null){
+			for(Tree.IfSubStmt stmt : gstmt.branchs){
+				stmt.accept(this);
+			}
+		}
+
+
+	}
+
+	// visitIfSubStmt
+	@Override
+	public void visitIfSubStmt(Tree.IfSubStmt stmt){
+		stmt.expr.accept(this);
+		if(stmt.stmt!=null){
+			stmt.stmt.accept(this);
+		}
+		checkTestExpr(stmt.expr);
 	}
 
 	// visiting types
