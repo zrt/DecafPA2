@@ -35,7 +35,9 @@ import decaf.error.BadScopyArgError;
 import decaf.error.BadScopySrcError;
 import decaf.error.BadSealedInherError;
 import decaf.error.BadArrIndexError;
+import decaf.error.BadArrOperArgError;
 import decaf.error.BadTestExpr;
+import decaf.error.BadDefError;
 import decaf.frontend.Parser;
 import decaf.scope.ClassScope;
 import decaf.scope.FormalScope;
@@ -647,6 +649,34 @@ public class TypeCheck extends Tree.Visitor {
 			issueError(new BadArrIndexError(exp.right.loc));
 		}
 
+	}
+
+	// visiting default
+	@Override
+	public void visitDefault(Tree.Default exp){
+		exp.arr.accept(this);
+		exp.index.accept(this);
+		exp.defa.accept(this);
+		exp.type = exp.defa.type;
+		if(!exp.arr.type.isArrayType()){
+			issueError(new BadArrOperArgError(exp.loc));
+			exp.type = BaseType.ERROR;
+		}else {
+			if (!exp.index.type.equal(BaseType.INT)) {
+				issueError(new BadArrIndexError(exp.loc));
+				exp.type = exp.defa.type;
+			}
+//			if (exp.defa.type.equal(BaseType.ERROR)) {
+//				exp.type = BaseType.ERROR;
+//			} else if (exp.defa.type.equal(BaseType.VOID) || exp.defa.type.equal(BaseType.UNKNOWN)) {
+//				issueError(new BadArrElementError(exp.loc));
+//				exp.type = BaseType.ERROR;
+//			}
+			if (exp.arr.type.isArrayType() && !exp.arr.type.equal(new ArrayType(exp.defa.type))) {
+				issueError(new BadDefError(exp.loc, ((ArrayType) exp.arr.type).getElementType().toString(), exp.defa.type.toString()));
+				exp.type = ((ArrayType) exp.arr.type).getElementType();
+			}
+		}
 	}
 
 	@Override
