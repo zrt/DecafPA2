@@ -333,9 +333,16 @@ public class TypeCheck extends Tree.Visitor {
 			Symbol v = table.lookupBeforeLocation(ident.name, ident
 					.getLocation());
 			if (v == null) {
-				issueError(new UndeclVarError(ident.getLocation(), ident.name));
-				ident.type = BaseType.ERROR;
+				if(ident.isVar){
+					ident.type = BaseType.UNKNOWN;
+				}else{
+					issueError(new UndeclVarError(ident.getLocation(), ident.name));
+					ident.type = BaseType.ERROR;
+				}
+
 			} else if (v.isVariable()) {
+				// is var , issue Error! [todo]
+
 				Variable var = (Variable) v;
 				ident.type = var.getType();
 				ident.symbol = var;
@@ -354,6 +361,8 @@ public class TypeCheck extends Tree.Visitor {
 					ident.lvKind = Tree.LValue.Kind.MEMBER_VAR;
 				}
 			} else {
+				// is var , issue Error! [todo]
+
 				ident.type = v.getType();
 				if (v.isClass()) {
 					if (ident.usedForRef) {
@@ -457,10 +466,17 @@ public class TypeCheck extends Tree.Visitor {
 		assign.expr.accept(this);
 		if (!assign.left.type.equal(BaseType.ERROR)
 				&& (assign.left.type.isFuncType() || !assign.expr.type
-						.compatible(assign.left.type))) {
+						.compatible(assign.left.type)) && !assign.left.type.equal(BaseType.UNKNOWN)) {
 			issueError(new IncompatBinOpError(assign.getLocation(),
 					assign.left.type.toString(), "=", assign.expr.type
 							.toString()));
+		}
+		if(assign.left.type.equal(BaseType.UNKNOWN)){
+			assign.left.type=assign.expr.type;
+			Tree.Ident ident = (Tree.Ident) assign.left;
+			Variable v = new Variable(ident.name, assign.expr.type,
+					ident.getLocation());
+			table.declare(v);
 		}
 	}
 
@@ -506,7 +522,7 @@ public class TypeCheck extends Tree.Visitor {
 			i++;
 			if (!e.type.equal(BaseType.ERROR) && !e.type.equal(BaseType.BOOL)
 					&& !e.type.equal(BaseType.INT)
-					&& !e.type.equal(BaseType.STRING)) {
+					&& !e.type.equal(BaseType.STRING)&& !e.type.equal(BaseType.UNKNOWN)) {
 				issueError(new BadPrintArgError(e.getLocation(), Integer
 						.toString(i), e.type.toString()));
 			}

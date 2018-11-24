@@ -112,7 +112,7 @@ public class BuildSym extends Tree.Visitor {
 					.getLocation());
 			return;
 		}
-		Variable v = new Variable(varDef.name, varDef.type.type, 
+		Variable v = new Variable(varDef.name, varDef.type.type,
 				varDef.getLocation());
 		Symbol sym = table.lookup(varDef.name, true);
 		if (sym != null) {
@@ -129,6 +129,35 @@ public class BuildSym extends Tree.Visitor {
 			table.declare(v);
 		}
 		varDef.symbol = v;
+	}
+
+	@Override
+	public void visitIdent(Tree.Ident ident) {
+		if(ident.isVar){
+			Variable v = new Variable(ident.name, BaseType.UNKNOWN,
+					ident.getLocation());
+			Symbol sym = table.lookup(ident.name, true);
+			if (sym != null) {
+				if (table.getCurrentScope().equals(sym.getScope())) {
+					issueError(new DeclConflictError(v.getLocation(), v.getName(),
+							sym.getLocation()));
+				} else if ((sym.getScope().isFormalScope() && table.getCurrentScope().isLocalScope() && ((LocalScope)table.getCurrentScope()).isCombinedtoFormal() )) {
+					issueError(new DeclConflictError(v.getLocation(), v.getName(),
+							sym.getLocation()));
+				} else {
+					table.declare(v);
+				}
+			} else {
+				table.declare(v);
+			}
+			ident.symbol = v;
+		}
+
+	}
+
+	@Override
+	public void visitAssign(Tree.Assign assign) {
+		assign.left.accept(this);
 	}
 
 	@Override
