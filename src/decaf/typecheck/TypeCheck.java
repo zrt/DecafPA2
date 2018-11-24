@@ -31,6 +31,8 @@ import decaf.error.RefNonStaticError;
 import decaf.error.SubNotIntError;
 import decaf.error.ThisInStaticFuncError;
 import decaf.error.UndeclVarError;
+import decaf.error.BadScopyArgError;
+import decaf.error.BadScopySrcError;
 import decaf.frontend.Parser;
 import decaf.scope.ClassScope;
 import decaf.scope.FormalScope;
@@ -527,6 +529,33 @@ public class TypeCheck extends Tree.Visitor {
 			whileLoop.loopBody.accept(this);
 		}
 		breaks.pop();
+	}
+
+	// Scopy
+	@Override
+	public void visitScopy(Tree.Scopy scopy) {
+		Symbol s_ident = table.lookup(scopy.ident, true);
+		scopy.expr.accept(this);
+		if(s_ident == null){
+			issueError(new UndeclVarError(scopy.getLocation(),
+					scopy.ident));
+			if(!scopy.expr.type.isClassType()){
+				issueError(new BadScopyArgError(scopy.getLocation(), "src", scopy.expr.type.toString() ));
+			}
+		}else{
+			if(s_ident.getType().isClassType()){
+				if(scopy.expr.type != s_ident.getType()){
+					issueError(new BadScopySrcError(scopy.getLocation(), s_ident.getType().toString(),scopy.expr.type.toString() ));
+				}
+			}else{
+				issueError(new BadScopyArgError(scopy.getLocation(),"dst", s_ident.getType().toString()));
+				if(!scopy.expr.type.isClassType()){
+					issueError(new BadScopyArgError(scopy.getLocation(), "src", scopy.expr.type.toString() ));
+				}
+			}
+		}
+
+
 	}
 
 	// visiting types
