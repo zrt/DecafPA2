@@ -34,6 +34,7 @@ import decaf.error.UndeclVarError;
 import decaf.error.BadScopyArgError;
 import decaf.error.BadScopySrcError;
 import decaf.error.BadSealedInherError;
+import decaf.error.BadArrIndexError;
 import decaf.error.BadTestExpr;
 import decaf.frontend.Parser;
 import decaf.scope.ClassScope;
@@ -342,24 +343,28 @@ public class TypeCheck extends Tree.Visitor {
 
 			} else if (v.isVariable()) {
 				// is var , issue Error! [todo]
-
-				Variable var = (Variable) v;
-				ident.type = var.getType();
-				ident.symbol = var;
-				if (var.isLocalVar()) {
-					ident.lvKind = Tree.LValue.Kind.LOCAL_VAR;
-				} else if (var.isParam()) {
-					ident.lvKind = Tree.LValue.Kind.PARAM_VAR;
-				} else {
-					if (currentFunction.isStatik()) {
-						issueError(new RefNonStaticError(ident.getLocation(),
-								currentFunction.getName(), ident.name));
+				if(ident.isVar){
+					ident.type = BaseType.UNKNOWN;
+				}else{
+					Variable var = (Variable) v;
+					ident.type = var.getType();
+					ident.symbol = var;
+					if (var.isLocalVar()) {
+						ident.lvKind = Tree.LValue.Kind.LOCAL_VAR;
+					} else if (var.isParam()) {
+						ident.lvKind = Tree.LValue.Kind.PARAM_VAR;
 					} else {
-						ident.owner = new Tree.ThisExpr(ident.getLocation());
-						ident.owner.accept(this);
+						if (currentFunction.isStatik()) {
+							issueError(new RefNonStaticError(ident.getLocation(),
+									currentFunction.getName(), ident.name));
+						} else {
+							ident.owner = new Tree.ThisExpr(ident.getLocation());
+							ident.owner.accept(this);
+						}
+						ident.lvKind = Tree.LValue.Kind.MEMBER_VAR;
 					}
-					ident.lvKind = Tree.LValue.Kind.MEMBER_VAR;
 				}
+
 			} else {
 				// is var , issue Error! [todo]
 
@@ -612,18 +617,36 @@ public class TypeCheck extends Tree.Visitor {
 	@Override
 	public void visitTypeIdent(Tree.TypeIdent type) {
 		switch (type.typeTag) {
-		case Tree.VOID:
-			type.type = BaseType.VOID;
-			break;
-		case Tree.INT:
-			type.type = BaseType.INT;
-			break;
-		case Tree.BOOL:
-			type.type = BaseType.BOOL;
-			break;
-		default:
-			type.type = BaseType.STRING;
+			case Tree.VOID:
+				type.type = BaseType.VOID;
+				break;
+			case Tree.INT:
+				type.type = BaseType.INT;
+				break;
+			case Tree.BOOL:
+				type.type = BaseType.BOOL;
+				break;
+			default:
+				type.type = BaseType.STRING;
 		}
+	}
+
+	// visiting Modmod
+	@Override
+	public void visitModmod(Tree.Modmod exp) {
+		exp.left.accept(this);
+		exp.right.accept(this);
+		exp.type =  new ArrayType(exp.left.type);
+		if (exp.left.type.equal(BaseType.ERROR)) {
+			exp.type = BaseType.ERROR;
+		} else if (exp.left.type.equal(BaseType.VOID) || exp.left.type.equal(BaseType.UNKNOWN)  ) {
+			issueError(new BadArrElementError(exp.left.loc));
+			exp.type = BaseType.ERROR;
+		}
+		if(!exp.right.type.equal(BaseType.INT)){
+			issueError(new BadArrIndexError(exp.right.loc));
+		}
+
 	}
 
 	@Override
