@@ -220,6 +220,55 @@ public class BuildSym extends Tree.Visitor {
 	}
 
 	@Override
+	public void visitForeachStmt(Tree.ForeachStmt stmt){
+		((Tree.Block)stmt.stmt).associatedScope = new LocalScope((Tree.Block)stmt.stmt);
+		((Tree.Block)stmt.stmt).nonew = true;
+		table.open(((Tree.Block)stmt.stmt).associatedScope);
+		if(stmt.isVar){
+			Variable v = new Variable(stmt.ident, BaseType.UNKNOWN,
+					stmt.getLocation());
+			Symbol sym = table.lookup(stmt.ident, true);
+			if (sym != null) {
+				if (table.getCurrentScope().equals(sym.getScope())) {
+					issueError(new DeclConflictError(v.getLocation(), v.getName(),
+							sym.getLocation()));
+				} else if ((sym.getScope().isFormalScope() && table.getCurrentScope().isLocalScope() && ((LocalScope)table.getCurrentScope()).isCombinedtoFormal() )) {
+					issueError(new DeclConflictError(v.getLocation(), v.getName(),
+							sym.getLocation()));
+				} else {
+					table.declare(v);
+				}
+			} else {
+				table.declare(v);
+			}
+			stmt.symbol = v;
+		}else{
+			stmt.type.accept(this);
+			Variable v = new Variable(stmt.ident, stmt.type.type,
+					stmt.getLocation());
+			Symbol sym = table.lookup(stmt.ident, true);
+			if (sym != null) {
+				if (table.getCurrentScope().equals(sym.getScope())) {
+					issueError(new DeclConflictError(v.getLocation(), v.getName(),
+							sym.getLocation()));
+				} else if ((sym.getScope().isFormalScope() && table.getCurrentScope().isLocalScope() && ((LocalScope)table.getCurrentScope()).isCombinedtoFormal() )) {
+					issueError(new DeclConflictError(v.getLocation(), v.getName(),
+							sym.getLocation()));
+				} else {
+					table.declare(v);
+				}
+			} else {
+				table.declare(v);
+			}
+			stmt.symbol = v;
+		}
+
+		table.close();
+
+		stmt.stmt.accept(this);
+	}
+
+	@Override
 	public void visitTypeArray(Tree.TypeArray typeArray) {
 		typeArray.elementType.accept(this);
 		if (typeArray.elementType.type.equal(BaseType.ERROR)) {
@@ -236,7 +285,8 @@ public class BuildSym extends Tree.Visitor {
 	// for VarDecl in LocalScope
 	@Override
 	public void visitBlock(Tree.Block block) {
-		block.associatedScope = new LocalScope(block);
+		if(!block.nonew)
+			block.associatedScope = new LocalScope(block);
 		table.open(block.associatedScope);
 		for (Tree s : block.block) {
 			s.accept(this);

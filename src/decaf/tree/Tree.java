@@ -499,6 +499,7 @@ public abstract class Tree {
 
     	public List<Tree> block;
     	public LocalScope associatedScope;
+    	public boolean nonew;
 
         public Block(List<Tree> block, Location loc) {
             super(BLOCK, loc);
@@ -1728,6 +1729,7 @@ public abstract class Tree {
         public String ident;
         public Expr inexpr, whileexpr;
         public Tree stmt;
+        public Variable symbol;
 
         public ForeachStmt(boolean isVar, TypeLiteral type, String ident, Expr inexpr, Expr whileexpr, Tree stmt, Location loc) {
             super(FOREACHSTMT, loc);

@@ -38,6 +38,8 @@ import decaf.error.BadArrIndexError;
 import decaf.error.BadArrOperArgError;
 import decaf.error.BadTestExpr;
 import decaf.error.BadDefError;
+import decaf.error.BadVarTypeError;
+import decaf.error.BadForeachTypeError;
 import decaf.frontend.Parser;
 import decaf.scope.ClassScope;
 import decaf.scope.FormalScope;
@@ -677,6 +679,48 @@ public class TypeCheck extends Tree.Visitor {
 				exp.type = ((ArrayType) exp.arr.type).getElementType();
 			}
 		}
+	}
+
+	@Override
+	public void visitForeachStmt(Tree.ForeachStmt stmt){
+		stmt.whileexpr.accept(this);
+		stmt.inexpr.accept(this);
+		if(!stmt.isVar)
+			stmt.type.accept(this);
+		checkTestExpr(stmt.whileexpr);
+
+		table.open(((Tree.Block)stmt.stmt).associatedScope);
+		if(stmt.isVar){
+			if(stmt.inexpr.type.equal(BaseType.ERROR) || stmt.inexpr.type.equal(BaseType.VOID)){
+				Variable v = new Variable(stmt.ident, BaseType.ERROR,
+						stmt.loc);
+				table.declare(v);
+			}else if(stmt.inexpr.type.isArrayType()){
+				Variable v = new Variable(stmt.ident, ((ArrayType)stmt.inexpr.type).getElementType(),
+						stmt.loc);
+				table.declare(v);
+			}else{
+				issueError(new BadArrOperArgError(stmt.loc));
+				Variable v = new Variable(stmt.ident, BaseType.ERROR,
+						stmt.loc);
+				table.declare(v);
+			}
+		}else{
+			if(stmt.inexpr.type.equal(BaseType.ERROR) || stmt.inexpr.type.equal(BaseType.VOID)){
+
+			}else if((!stmt.inexpr.type.isArrayType())){
+				issueError(new BadArrOperArgError(stmt.loc));
+			}else if((!((ArrayType)stmt.inexpr.type).getElementType().compatible(stmt.type.type))){
+				issueError(new BadForeachTypeError(stmt.loc, stmt.type.type.toString(), ((ArrayType)stmt.inexpr.type).getElementType().toString()));
+			}
+		}
+		table.close();
+
+		breaks.add(stmt);
+		if (stmt.stmt != null) {
+			stmt.stmt.accept(this);
+		}
+		breaks.pop();
 	}
 
 	@Override
