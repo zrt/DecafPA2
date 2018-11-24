@@ -33,6 +33,7 @@ import decaf.error.ThisInStaticFuncError;
 import decaf.error.UndeclVarError;
 import decaf.error.BadScopyArgError;
 import decaf.error.BadScopySrcError;
+import decaf.error.BadSealedInherError;
 import decaf.frontend.Parser;
 import decaf.scope.ClassScope;
 import decaf.scope.FormalScope;
@@ -44,6 +45,7 @@ import decaf.symbol.Function;
 import decaf.symbol.Symbol;
 import decaf.symbol.Variable;
 import decaf.type.*;
+
 
 public class TypeCheck extends Tree.Visitor {
 
@@ -425,6 +427,23 @@ public class TypeCheck extends Tree.Visitor {
 		for (Tree.ClassDef cd : program.classes) {
 			cd.accept(this);
 		}
+
+		for (Tree.ClassDef cd : program.classes) {
+
+//			System.out.println(cd.name+','+cd.parent+'\n');
+			if(cd.sealed){
+				for (Tree.ClassDef cd2 : program.classes) {
+
+//					System.out.println('2' + cd2.name+','+cd2.parent+'\n');
+
+					if(cd.name.equals(cd2.parent)){
+//						System.out.println(cd.name+'\n');
+						issueError(new BadSealedInherError(cd2.loc));
+					}
+				}
+			}
+		}
+
 		table.close();
 	}
 
@@ -554,8 +573,6 @@ public class TypeCheck extends Tree.Visitor {
 				}
 			}
 		}
-
-
 	}
 
 	// visiting types
