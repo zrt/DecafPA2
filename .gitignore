@@ -1,3 +1,5 @@
+*zip
+tex/
 .idea
 result/
 src/decaf/frontend/Parser.java
@@ -6,7 +8,7 @@ src/decaf/frontend/Parser.output
 *.DS_STORE
 *swp
 *doc
-*pdf
+report.pdf
 *output/
 *S1/
 *S2/
